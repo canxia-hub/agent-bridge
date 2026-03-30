@@ -14,10 +14,12 @@ OpenClaw 多 Agent 正式通信技能。
 ## 核心特性
 
 - 基于 OpenClaw 原生 `sessions_*` 工具集
-- 支持 `send / ask / notify / broadcast`
-- 支持多轮对话与线程管理
-- 完整错误处理与指数退避重试
+- 支持四种通信类型：`NOTIFY` / `QUERY` / `DELEGATE` / `COLLABORATE`
+- 支持多轮对话与线程管理（最多 5 轮）
+- 完整错误处理与熔断保护
 - 消息状态追踪（pending / delivered / replied / timeout）
+- **静默规则**：避免死循环的关键机制
+- **会话生命周期管理**：处理 done 状态的超时问题
 - 适用于双 Agent 也适用于未来 3+ Agent 协作扩展
 
 ## 项目结构
@@ -123,7 +125,45 @@ await bridge.end_conversation(thread.thread_id)
 
 `scripts/` 中的代码虽然是 Python，但它的核心价值依赖 OpenClaw 的 `sessions_send / sessions_history / sessions_list` 环境。脱离 OpenClaw，功能会退化为说明模式或无法真正通信。
 
+### 6. 静默规则（v4.1 新增）
+
+**重要**：不发送消息和发送消息一样重要。
+
+以下场景应保持静默，不回复：
+- 任务完成后收到确认消息
+- 收到重复 MSG_ID
+- 收到纯 ACK/COMPLETED 消息
+- 用户明确要求静默时
+
+避免回复 → 对方回复 → 死循环。
+
+### 7. 会话生命周期（v4.1 新增）
+
+Agent 完成任务后会话自动进入 "done" 状态，此时 sessions_send 会超时。解决方案：
+- 发送前检查会话状态
+- 发现超时后重新激活会话
+- 简化流程：由 main 直接传递已知结果
+
 ## 版本
+
+### v4.1.0 (2026-03-31)
+
+- 🆕 新增「静默规则」章节，避免死循环
+- 🆕 新增会话生命周期管理说明
+- ✨ 优化群发消息指导
+- ✨ 优化 DELEGATE 静默等待机制
+- 📝 更新消息头格式规范
+
+### v4.0.0
+
+- 重构通信纪律为 4 种类型：NOTIFY / QUERY / DELEGATE / COLLABORATE
+- 新增 AGENTS.md 精简模板
+- 新增群发消息规则
+
+### v3.2.0
+
+- 新增任务分类机制
+- 优化重试流程（倍数退避）
 
 ### v2.0.0
 
